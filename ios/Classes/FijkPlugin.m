@@ -56,10 +56,13 @@ typedef NS_ENUM(int, FijkVoUIMode) {
 static FijkPlugin *_instance = nil;
 
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar> *)registrar {
+    NSLog(@"registerWithRegistrar");
     FlutterMethodChannel *channel =
         [FlutterMethodChannel methodChannelWithName:@"befovy.com/fijk"
                                     binaryMessenger:[registrar messenger]];
     FijkPlugin *instance = [[FijkPlugin alloc] initWithRegistrar:registrar];
+    // [FlutterPluginRegistry publish:] is mandatory for receiving detachFromEngineForRegistrar.
+    [registrar publish:instance];
     _instance = instance;
     [registrar addMethodCallDelegate:instance channel:channel];
 
@@ -97,6 +100,20 @@ static FijkPlugin *_instance = nil;
                  object:nil];
     }
     return self;
+}
+
+
+// This method gets called when Flutter engine is about to be deleted/deallocated from the memory.
+// IJKPlayer's internal rendering thread calls textureFrameAvailable.
+// This causes bad memory access & crash to take place if app is closed with a video playing.
+// See: https://github.com/flutter/engine/blob/1eeb38cc99a847c0a5030d3587c48b1d156b4f04/shell/platform/darwin/ios/framework/Headers/FlutterPlugin.h#L230-L243
+- (void)detachFromEngineForRegistrar:(NSObject<FlutterPluginRegistrar> *)registrar {
+    NSLog(@"detachFromEngineForRegistrar");
+    for(id key in _fijkPlayers) {
+        FijkPlayer* fijkPlayer = [_fijkPlayers objectForKey:key];
+        [fijkPlayer notifyDetachFromEngine];
+        [fijkPlayer shutdown];
+    }
 }
 
 - (void)handleMethodCall:(FlutterMethodCall *)call

@@ -43,25 +43,26 @@ static atomic_int atomicId = 0;
 
 @implementation FijkPlayer {
     IJKFFMediaPlayer *_ijkMediaPlayer;
-
+    
     FijkQueuingEventSink *_eventSink;
     FlutterMethodChannel *_methodChannel;
     FlutterEventChannel *_eventChannel;
-
+    
     id<FlutterPluginRegistrar> _registrar;
     id<FlutterTextureRegistry> _textureRegistry;
-
+    
     CVPixelBufferRef volatile _latestPixelBuffer;
     CVPixelBufferRef _lastBuffer;
-
+    
     int _width;
     int _height;
     int _rotate;
-
+    
     FijkHostOption *_hostOption;
     int _state;
     int _pid;
     int64_t _vid;
+    bool _detachedFromEngine;
 }
 
 static const int idle = 0;
@@ -102,7 +103,7 @@ static int renderType = 0;
         _vid = -1;
         _rotate = -1;
         _state = 0;
-
+        _detachedFromEngine = false;
         _hostOption = [[FijkHostOption alloc] init];
         _lastBuffer = nil;
         if (renderType == 0) {
@@ -117,7 +118,7 @@ static int renderType = 0;
         //    [_ijkMediaPlayer setLoop:0];
         //    [_ijkMediaPlayer setSpeed:4.0];
         //}
-
+        
         [_ijkMediaPlayer setOptionIntValue:0
                                     forKey:@"start-on-prepared"
                                 ofCategory:kIJKFFOptionCategoryPlayer];
@@ -127,33 +128,37 @@ static int renderType = 0;
         [_ijkMediaPlayer setOptionIntValue:1
                                     forKey:@"videotoolbox"
                                 ofCategory:kIJKFFOptionCategoryPlayer];
-
+        
         [IJKFFMoviePlayerController setLogLevel:k_IJK_LOG_INFO];
-
+        
         [_ijkMediaPlayer addIJKMPEventHandler:self];
-
+        
         _methodChannel = [FlutterMethodChannel
-            methodChannelWithName:[@"befovy.com/fijkplayer/"
-                                      stringByAppendingString:[_playerId
-                                                                  stringValue]]
-                  binaryMessenger:[registrar messenger]];
-
+                          methodChannelWithName:[@"befovy.com/fijkplayer/"
+                                                 stringByAppendingString:[_playerId
+                                                                          stringValue]]
+                          binaryMessenger:[registrar messenger]];
+        
         __block typeof(self) weakSelf = self;
         [_methodChannel setMethodCallHandler:^(FlutterMethodCall *call,
                                                FlutterResult result) {
-          [weakSelf handleMethodCall:call result:result];
+            [weakSelf handleMethodCall:call result:result];
         }];
-
+        
         _eventChannel = [FlutterEventChannel
-            eventChannelWithName:[@"befovy.com/fijkplayer/event/"
-                                     stringByAppendingString:[_playerId
-                                                                 stringValue]]
-                 binaryMessenger:[registrar messenger]];
-
+                         eventChannelWithName:[@"befovy.com/fijkplayer/event/"
+                                               stringByAppendingString:[_playerId
+                                                                        stringValue]]
+                         binaryMessenger:[registrar messenger]];
+        
         [_eventChannel setStreamHandler:self];
     }
-
+    
     return self;
+}
+
+- (void)notifyDetachFromEngine {
+    _detachedFromEngine = true;
 }
 
 - (void)setup {
@@ -212,8 +217,7 @@ static int renderType = 0;
 // IJKCVPBViewProtocol delegate
 // IJKFFMediaPlayer will incoke this method whem new frame should be displayed
 - (void)display_pixelbuffer:(CVPixelBufferRef)pixelbuffer {
-
-    if (_lastBuffer == nil) {
+        if (_lastBuffer == nil) {
         _lastBuffer = CVPixelBufferRetain(pixelbuffer);
         CFRetain(pixelbuffer);
     } else if (_lastBuffer != pixelbuffer) {
@@ -234,7 +238,9 @@ static int renderType = 0;
         CFRelease(old);
     }
     if (_vid >= 0) {
-        [_textureRegistry textureFrameAvailable:_vid];
+//        if (!_detachedFromEngine && _textureRegistry != nil) {
+//            [_textureRegistry textureFrameAvailable:_vid];
+//        }
     }
 }
 

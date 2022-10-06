@@ -36,6 +36,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (instancetype)initJustTexture;
 
+- (void)notifyDetachFromEngine;
+
 - (void)shutdown;
 
 @end
