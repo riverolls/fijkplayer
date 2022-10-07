@@ -61,8 +61,6 @@ static FijkPlugin *_instance = nil;
         [FlutterMethodChannel methodChannelWithName:@"befovy.com/fijk"
                                     binaryMessenger:[registrar messenger]];
     FijkPlugin *instance = [[FijkPlugin alloc] initWithRegistrar:registrar];
-    // [FlutterPluginRegistry publish:] is mandatory for receiving detachFromEngineForRegistrar.
-    [registrar publish:instance];
     _instance = instance;
     [registrar addMethodCallDelegate:instance channel:channel];
 
@@ -70,6 +68,9 @@ static FijkPlugin *_instance = nil;
     int64_t vid = [[registrar textures] registerTexture:player];
     [player shutdown];
     [[registrar textures] unregisterTexture:vid];
+    
+    // [FlutterPluginRegistry publish:] is mandatory for receiving detachFromEngineForRegistrar.
+    [registrar publish:instance];
 }
 
 + (FijkPlugin *)singleInstance {

@@ -215,7 +215,7 @@ static int renderType = 0;
 }
 
 // IJKCVPBViewProtocol delegate
-// IJKFFMediaPlayer will incoke this method whem new frame should be displayed
+// IJKFFMediaPlayer will invoke this method whem new frame should be displayed
 - (void)display_pixelbuffer:(CVPixelBufferRef)pixelbuffer {
         if (_lastBuffer == nil) {
         _lastBuffer = CVPixelBufferRetain(pixelbuffer);
@@ -238,9 +238,11 @@ static int renderType = 0;
         CFRelease(old);
     }
     if (_vid >= 0) {
-//        if (!_detachedFromEngine && _textureRegistry != nil) {
-//            [_textureRegistry textureFrameAvailable:_vid];
-//        }
+        // Only render new frames when the application is in foreground i.e. not in the App Switcher etc.
+        UIApplicationState state = [[UIApplication sharedApplication] applicationState];
+        if (state == UIApplicationStateActive && !_detachedFromEngine && _textureRegistry != nil) {
+            [_textureRegistry textureFrameAvailable:_vid];
+        }
     }
 }
 
